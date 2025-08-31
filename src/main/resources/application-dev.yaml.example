@@ -1,0 +1,25 @@
+# Example development configuration
+# Copy this file to application-dev.yaml and update with your settings
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Replace with your Auth0 domain
+          jwk-set-uri: https://YOUR_AUTH0_DOMAIN/.well-known/jwks.json
+  h2:
+    console:
+      enabled: true
+      path: /public/h2-console
+
+logging:
+  level:
+    root: DEBUG
