@@ -67,3 +67,9 @@ The application uses Spring Boot profiles for environment-specific configuration
 - User entity with Spring Data JPA repository
 - UserController with REST endpoints
 - Security configuration for OAuth2 with Auth0 integration
+- Standardized response and exception handling system
+
+## Module Documentation
+
+For detailed implementation documentation of specific modules, refer to:
+- **Response & Exception Handling**: [common/CLAUDE.md](src/main/java/dev/ganeshpalankar/rentals_backend/common/CLAUDE.md) - Complete guide to standardized API responses and exception handling architecture
