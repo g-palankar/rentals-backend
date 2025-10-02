@@ -2,6 +2,8 @@ package dev.ganeshpalankar.rentals_backend.common.exception;
 
 import dev.ganeshpalankar.rentals_backend.common.response.ErrorDetail;
 import dev.ganeshpalankar.rentals_backend.common.response.ErrorResponse;
+import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsException;
+import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsExceptionHandler;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,7 +29,7 @@ public class GlobalExceptionHandler {
 
     private void initializeHandlers() {
         // Manual mapping of exceptions to their handlers
-//        handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
+        handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
     }
 
     @ExceptionHandler(Exception.class)
