@@ -86,7 +86,7 @@ public class ErrorResponseBuilder {
     public ErrorResponseBuilder addFieldError(String field, String message, Object rejectedValue) {
         FieldError fieldError = new FieldError();
         fieldError.setField(field);
-        fieldError.setMessage(message);
+        fieldError.setMessages(List.of(message));
         fieldError.setRejectedValue(rejectedValue);
         this.fieldErrors.add(fieldError);
         return this;
