@@ -4,20 +4,14 @@ import dev.ganeshpalankar.rentals_backend.common.exception.ApplicationException;
 import lombok.Getter;
 
 /**
- * Exception thrown when attempting to create a user that already exists.
+ * Exception thrown when a user is not registered in the system.
  * Contains metadata about the user identifier for detailed error reporting.
  */
 @Getter
-public class UserAlreadyExistsException extends ApplicationException {
-
+public class UserNotRegisteredException extends ApplicationException {
     private final String externalId;
 
-    /**
-     * Create a new UserAlreadyExistsException.
-     *
-     * @param externalId the external ID that already exists
-     */
-    public UserAlreadyExistsException(String externalId) {
+    public UserNotRegisteredException(String externalId) {
         super();
         this.externalId = externalId;
     }

@@ -4,6 +4,8 @@ import dev.ganeshpalankar.rentals_backend.common.response.ErrorDetail;
 import dev.ganeshpalankar.rentals_backend.common.response.ErrorResponse;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsException;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsExceptionHandler;
+import dev.ganeshpalankar.rentals_backend.users.exception.UserNotRegisteredException;
+import dev.ganeshpalankar.rentals_backend.users.exception.UserNotRegisteredExceptionHandler;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,11 +18,12 @@ import java.util.Map;
 
 /**
  * Global exception handler with manual mapping of exceptions to their handlers.
+ * Only handles application-specific exceptions that extend ApplicationException.
  */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final Map<Class<? extends Exception>, ExceptionResponseHandler<?>> handlerMap;
+    private final Map<Class<? extends ApplicationException>, ExceptionResponseHandler<?>> handlerMap;
 
     public GlobalExceptionHandler() {
         this.handlerMap = new HashMap<>();
@@ -30,22 +33,23 @@ public class GlobalExceptionHandler {
     private void initializeHandlers() {
         // Manual mapping of exceptions to their handlers
         handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
+        handlerMap.put(UserNotRegisteredException.class, new UserNotRegisteredExceptionHandler());
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
-        ExceptionResponseHandler<Exception> handler = (ExceptionResponseHandler<Exception>) handlerMap.get(ex.getClass());
+    @ExceptionHandler(ApplicationException.class)
+    public ResponseEntity<ErrorResponse> handleException(ApplicationException ex, HttpServletRequest request) {
+        ExceptionResponseHandler<ApplicationException> handler = (ExceptionResponseHandler<ApplicationException>) handlerMap.get(ex.getClass());
 
         if (handler != null) {
             ErrorResponse errorResponse = handler.handle(ex, request);
             return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
         }
 
-        // Fallback for unmapped exceptions
+        // Fallback for unmapped application exceptions
         return handleGenericException(ex, request);
     }
 
-    private ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
+    private ResponseEntity<ErrorResponse> handleGenericException(ApplicationException ex, HttpServletRequest request) {
         ErrorDetail errorDetail = new ErrorDetail();
         errorDetail.setCode("INTERNAL_ERROR");
         errorDetail.setType(ErrorType.SERVER_ERROR.toString());
