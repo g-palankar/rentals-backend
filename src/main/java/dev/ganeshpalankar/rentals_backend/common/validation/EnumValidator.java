@@ -22,10 +22,10 @@ public class EnumValidator implements ConstraintValidator<ValidEnum, String> {
     public boolean isValid(String value, ConstraintValidatorContext context) {
 
         if (value == null) {
-            return false;
+            return true;
         }
 
         return Arrays.stream(enumClass.getEnumConstants())
-                .anyMatch(e -> e.equals(value));
+                .anyMatch(e -> e.name().equals(value));
     }
 }
