@@ -20,16 +20,15 @@ public class UserNotRegisteredExceptionHandler implements ExceptionResponseHandl
     public ErrorResponse handle(UserNotRegisteredException exception, HttpServletRequest request) {
         ErrorDetail errorDetail = new ErrorDetail();
         errorDetail.setCode("USER_NOT_REGISTERED");
-        errorDetail.setType(ErrorType.AUTHENTICATION_ERROR.toString());
+        errorDetail.setType(ErrorType.AUTHORIZATION_ERROR.toString());
         errorDetail.setDetails(String.format("User with external ID '%s' is not registered. Please complete signup.", exception.getExternalId()));
 
         ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setStatus(401);
+        errorResponse.setStatus(403);
         errorResponse.setMessage("User not registered");
         errorResponse.setError(errorDetail);
         errorResponse.setPath(request.getRequestURI());
         errorResponse.setMethod(request.getMethod());
-        errorResponse.setFieldErrors(new ArrayList<>());
         errorResponse.setTimestamp(Instant.now());
 
         return errorResponse;

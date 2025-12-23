@@ -33,7 +33,6 @@ public class GlobalExceptionHandler {
     private void initializeHandlers() {
         // Manual mapping of exceptions to their handlers
         handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
-        handlerMap.put(UserNotRegisteredException.class, new UserNotRegisteredExceptionHandler());
     }
 
     @ExceptionHandler(ApplicationException.class)
