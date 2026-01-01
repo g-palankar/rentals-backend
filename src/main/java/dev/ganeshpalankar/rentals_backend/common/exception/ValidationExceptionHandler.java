@@ -12,6 +12,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -83,6 +84,32 @@ public class ValidationExceptionHandler {
         errorResponse.setPath(request.getRequestURI());
         errorResponse.setMethod(request.getMethod());
         errorResponse.setFieldErrors(fieldErrors);
+        errorResponse.setTimestamp(Instant.now());
+
+        return ResponseEntity.status(400).body(errorResponse);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request
+    ){
+        // Build error detail
+        ErrorDetail errorDetail = new ErrorDetail();
+        errorDetail.setCode("INVALID_PARAMETER_TYPE");
+        errorDetail.setType(ErrorType.VALIDATION_ERROR.toString());
+
+        // Build error response
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setStatus(400);
+        errorResponse.setMessage(String.format(
+                "Parameter '%s' must be a valid number. Received: '%s'",
+                ex.getName(),
+                ex.getValue()
+        ));
+        errorResponse.setError(errorDetail);
+        errorResponse.setPath(request.getRequestURI());
+        errorResponse.setMethod(request.getMethod());
         errorResponse.setTimestamp(Instant.now());
 
         return ResponseEntity.status(400).body(errorResponse);
