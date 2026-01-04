@@ -33,6 +33,7 @@ public class GlobalExceptionHandler {
     private void initializeHandlers() {
         // Manual mapping of exceptions to their handlers
         handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
+        handlerMap.put(ResourceNotFoundException.class, new ResourceNotFountExceptionHandler());
     }
 
     @ExceptionHandler(ApplicationException.class)
