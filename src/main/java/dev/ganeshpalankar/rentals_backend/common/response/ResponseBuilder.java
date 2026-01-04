@@ -40,9 +40,7 @@ public class ResponseBuilder<T> {
         if (this.httpStatus == null) {
             throw new IllegalStateException("HTTP status is required");
         }
-        if (this.message == null) {
-            throw new IllegalStateException("Message is required");
-        }
+
 
         ApiResponse<T> apiResponse = new ApiResponse<>(
             this.httpStatus.value(),
