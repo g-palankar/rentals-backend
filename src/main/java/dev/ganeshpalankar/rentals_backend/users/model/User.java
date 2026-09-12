@@ -22,6 +22,9 @@ public class User {
     @Column(name = "external_id", nullable = false, unique = true)
     private String externalId;
 
+    @Column(name = "email", length = 255)
+    private String email;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

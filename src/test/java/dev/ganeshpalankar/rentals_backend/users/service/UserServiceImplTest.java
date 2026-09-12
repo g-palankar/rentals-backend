@@ -51,7 +51,7 @@ class UserServiceImplTest {
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
         // When
-        User result = userService.signup(validExternalId);
+        User result = userService.signup(validExternalId, null);
 
         // Then
         assertThat(result).isNotNull();
@@ -69,7 +69,7 @@ class UserServiceImplTest {
         when(userRepository.existsByExternalId(validExternalId)).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> userService.signup(validExternalId))
+        assertThatThrownBy(() -> userService.signup(validExternalId, null))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasFieldOrPropertyWithValue("externalId", validExternalId);
 
@@ -81,7 +81,7 @@ class UserServiceImplTest {
     @DisplayName("signup() - Should throw RuntimeException when externalId is null")
     void signup_WithNullExternalId_ShouldThrowRuntimeException() {
         // When & Then
-        assertThatThrownBy(() -> userService.signup(null))
+        assertThatThrownBy(() -> userService.signup(null, null))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("External ID cannot be null or empty");
 
@@ -93,7 +93,7 @@ class UserServiceImplTest {
     @DisplayName("signup() - Should throw RuntimeException when externalId is empty")
     void signup_WithEmptyExternalId_ShouldThrowRuntimeException() {
         // When & Then
-        assertThatThrownBy(() -> userService.signup(""))
+        assertThatThrownBy(() -> userService.signup("", null))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("External ID cannot be null or empty");
 
@@ -105,7 +105,7 @@ class UserServiceImplTest {
     @DisplayName("signup() - Should throw RuntimeException when externalId is blank")
     void signup_WithBlankExternalId_ShouldThrowRuntimeException() {
         // When & Then
-        assertThatThrownBy(() -> userService.signup("   "))
+        assertThatThrownBy(() -> userService.signup("   ", null))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("External ID cannot be null or empty");
 
@@ -125,7 +125,7 @@ class UserServiceImplTest {
         });
 
         // When
-        User result = userService.signup(validExternalId);
+        User result = userService.signup(validExternalId, null);
 
         // Then
         verify(userRepository).save(argThat(user ->

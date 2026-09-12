@@ -3,17 +3,17 @@ package dev.ganeshpalankar.rentals_backend.users.service;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsException;
 import dev.ganeshpalankar.rentals_backend.users.model.User;
 import dev.ganeshpalankar.rentals_backend.users.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Override
-    public User signup(String externalId) {
+    public User signup(String externalId, String email) {
         if (externalId == null || externalId.trim().isEmpty()) {
             throw new RuntimeException("External ID cannot be null or empty");
         }
@@ -24,6 +24,7 @@ public class UserServiceImpl implements UserService {
 
         User user = new User();
         user.setExternalId(externalId);
+        user.setEmail(email);
 
         return userRepository.save(user);
     }

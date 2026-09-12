@@ -28,4 +28,6 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
      * @return count of properties owned by the user
      */
     long countByOwnerId(Long ownerId);
+
+    boolean existsByOrganisationId(Long organisationId);
 }

@@ -4,7 +4,7 @@ import dev.ganeshpalankar.rentals_backend.common.response.ApiResponse;
 import dev.ganeshpalankar.rentals_backend.common.response.ResponseBuilder;
 import dev.ganeshpalankar.rentals_backend.users.model.User;
 import dev.ganeshpalankar.rentals_backend.users.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,14 +13,16 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
-    @Autowired
-    private UserService userService;
+
+    private final UserService userService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<User>> signup(Authentication authentication) {
-        String externalId = extractExternalIdFromJwt(authentication);
-        User user = userService.signup(externalId);
+        String externalId = extractClaimFromJwt(authentication, "sub");
+        String email = extractClaimFromJwt(authentication, "email");
+        User user = userService.signup(externalId, email);
         return ResponseBuilder.<User>create()
                 .status(HttpStatus.CREATED)
                 .message("User created successfully")
@@ -44,15 +46,10 @@ public class UserController {
         }
     }
 
-    private String extractExternalIdFromJwt(Authentication authentication) {
+    private String extractClaimFromJwt(Authentication authentication, String claim) {
         if (authentication.getPrincipal() instanceof Jwt jwt) {
-            String sub = jwt.getClaimAsString("sub");
-            if (sub == null || sub.trim().isEmpty()) {
-                throw new RuntimeException("JWT token missing 'sub' claim");
-            }
-            return sub;
+            return jwt.getClaimAsString(claim);
         }
         throw new RuntimeException("Authentication principal is not a JWT token");
     }
 }
-

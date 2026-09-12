@@ -2,6 +2,16 @@ package dev.ganeshpalankar.rentals_backend.common.exception;
 
 import dev.ganeshpalankar.rentals_backend.common.response.ErrorDetail;
 import dev.ganeshpalankar.rentals_backend.common.response.ErrorResponse;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.LastAdminException;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.LastAdminExceptionHandler;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.MemberAlreadyExistsException;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.MemberAlreadyExistsExceptionHandler;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.OrgHasPropertiesException;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.OrgHasPropertiesExceptionHandler;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.OrganisationNotFoundException;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.OrganisationNotFoundExceptionHandler;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.UserNotFoundByEmailException;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.UserNotFoundByEmailExceptionHandler;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsException;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserAlreadyExistsExceptionHandler;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserNotRegisteredException;
@@ -31,9 +41,15 @@ public class GlobalExceptionHandler {
     }
 
     private void initializeHandlers() {
-        // Manual mapping of exceptions to their handlers
         handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
+        handlerMap.put(UserNotRegisteredException.class, new UserNotRegisteredExceptionHandler());
         handlerMap.put(ResourceNotFoundException.class, new ResourceNotFoundExceptionHandler());
+        handlerMap.put(ForbiddenException.class, new ForbiddenExceptionHandler());
+        handlerMap.put(OrganisationNotFoundException.class, new OrganisationNotFoundExceptionHandler());
+        handlerMap.put(LastAdminException.class, new LastAdminExceptionHandler());
+        handlerMap.put(OrgHasPropertiesException.class, new OrgHasPropertiesExceptionHandler());
+        handlerMap.put(UserNotFoundByEmailException.class, new UserNotFoundByEmailExceptionHandler());
+        handlerMap.put(MemberAlreadyExistsException.class, new MemberAlreadyExistsExceptionHandler());
     }
 
     @ExceptionHandler(ApplicationException.class)

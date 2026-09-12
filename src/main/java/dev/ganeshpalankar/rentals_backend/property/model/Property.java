@@ -52,6 +52,9 @@ public class Property {
     @Enumerated(EnumType.STRING)
     private PropertyType propertyType;
 
+    @Column(name = "organisation_id")
+    private Long organisationId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
