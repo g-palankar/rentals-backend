@@ -3,10 +3,9 @@ package dev.ganeshpalankar.rentals_backend.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ganeshpalankar.rentals_backend.common.exception.ErrorType;
-import dev.ganeshpalankar.rentals_backend.common.response.ErrorDetail;
 import dev.ganeshpalankar.rentals_backend.common.response.ErrorResponse;
+import dev.ganeshpalankar.rentals_backend.common.response.ErrorResponseBuilder;
 import dev.ganeshpalankar.rentals_backend.users.exception.UserNotRegisteredException;
-import dev.ganeshpalankar.rentals_backend.users.exception.UserNotRegisteredExceptionHandler;
 import dev.ganeshpalankar.rentals_backend.users.service.UserContextService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,8 +19,6 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -81,8 +78,15 @@ public class RegisteredUserFilter extends OncePerRequestFilter {
                                    HttpServletRequest request,
                                    UserNotRegisteredException ex) throws IOException {
 
-        ErrorResponse errorResponse = new UserNotRegisteredExceptionHandler()
-                .handle(ex,request);
+        ErrorResponse errorResponse = ErrorResponseBuilder.create()
+                .status(403)
+                .message("User not registered")
+                .errorCode("USER_NOT_REGISTERED")
+                .errorType(ErrorType.AUTHORIZATION_ERROR.toString())
+                .errorDetails("User with external ID '%s' is not registered. Please complete signup.".formatted(ex.getExternalId()))
+                .request(request)
+                .build()
+                .getBody();
 
         response.setStatus(errorResponse.getStatus());
         response.setContentType("application/json");

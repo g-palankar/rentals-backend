@@ -16,8 +16,7 @@ common/
 ├── exception/
 │   ├── ApplicationException.java  # Base class for all application exceptions
 │   ├── ErrorType.java             # Error type enumeration
-│   ├── ExceptionResponseHandler.java  # Handler interface
-│   ├── GlobalExceptionHandler.java    # Application exception handling
+│   ├── CommonExceptionHandler.java    # Cross-cutting exceptions + ApplicationException fallback
 │   └── ValidationExceptionHandler.java # Framework validation exception handling
 └── validation/
     ├── ValidEnum.java             # Custom enum validation annotation
@@ -114,18 +113,31 @@ All error responses follow this standardized format:
 
 ### Error Response Builder
 
-**Not typically used directly** - ErrorResponseBuilder exists but exception handlers usually construct ErrorResponse directly using setters for better control.
+Use `ErrorResponseBuilder` in all exception handlers. The fluent API produces a `ResponseEntity<ErrorResponse>` in one chain:
+
+```java
+return ErrorResponseBuilder.create()
+        .status(404)
+        .message("Organisation not found")
+        .errorCode("ORGANISATION_NOT_FOUND")
+        .errorType(ErrorType.RESOURCE_NOT_FOUND.toString())
+        .errorDetails("Organisation with ID '%s' does not exist".formatted(ex.getOrganisationId()))
+        .request(request)   // sets both path and method from HttpServletRequest
+        .build();
+```
 
 ## Exception Handling System
 
 ### Architecture Overview
 
-The exception handling system uses **two separate handlers** for different exception types:
+The exception handling system uses **two separate handler tiers** for different exception types:
 
-1. **GlobalExceptionHandler** - Handles application-specific exceptions that extend `ApplicationException`
-   - Uses Strategy Pattern with manual exception-to-handler mapping
-   - Only catches exceptions extending ApplicationException base class
-   - Delegates to specific handlers for detailed error responses
+1. **Domain-local `@ControllerAdvice` classes** - Each module owns its exception handling
+   - `users/exception/UserExceptionHandler` — user domain exceptions
+   - `organisation/exception/OrganisationExceptionHandler` — organisation domain exceptions
+   - `common/exception/CommonExceptionHandler` — cross-cutting exceptions (`ForbiddenException`, `ResourceNotFoundException`) and the `ApplicationException` catch-all fallback
+   - Spring auto-discovers all `@ControllerAdvice` beans — no registration step required
+   - Adding a new exception handler = add a `@ExceptionHandler` method to the relevant domain class
 
 2. **ValidationExceptionHandler** - Handles framework validation exceptions
    - Catches `MethodArgumentNotValidException` (@Valid on request body)
@@ -181,14 +193,14 @@ public class ApplicationException extends RuntimeException {
 ```
 
 **Why ApplicationException?**
-- Ensures GlobalExceptionHandler only catches application domain exceptions
+- Ensures domain `@ControllerAdvice` classes only catch application exceptions
 - Prevents catching framework exceptions (validation, security, etc.)
-- Allows ValidationExceptionHandler to handle framework validation exceptions separately
-- Clear separation of concerns between business logic errors and validation errors
+- Allows `ValidationExceptionHandler` to handle framework validation exceptions separately
+- `CommonExceptionHandler` catches the base `ApplicationException` as a safety fallback for any unmapped subclass
 
 ### Creating a New Application Exception
 
-**Step 1: Create Exception Class (in domain package)**
+**Step 1: Create the exception class (in the domain package)**
 
 ```java
 package dev.ganeshpalankar.rentals_backend.users.exception;
@@ -208,69 +220,37 @@ public class UserAlreadyExistsException extends ApplicationException {
 ```
 
 **Key Points:**
-- **MUST extend `ApplicationException`** (not RuntimeException directly)
+- **MUST extend `ApplicationException`** (not `RuntimeException` directly)
 - Contains only metadata fields (no error messages)
-- Uses `super()` with no message - handler creates user-facing message
 - Uses Lombok `@Getter` for field access
 
-**Step 2: Create Exception Handler (in domain package)**
+**Step 2: Add a `@ExceptionHandler` method to the domain's `@ControllerAdvice`**
 
 ```java
-package dev.ganeshpalankar.rentals_backend.users.exception;
+// users/exception/UserExceptionHandler.java
+@ControllerAdvice
+@RequiredArgsConstructor
+public class UserExceptionHandler {
 
-import dev.ganeshpalankar.rentals_backend.common.exception.ErrorType;
-import dev.ganeshpalankar.rentals_backend.common.exception.ExceptionResponseHandler;
-import dev.ganeshpalankar.rentals_backend.common.response.ErrorDetail;
-import dev.ganeshpalankar.rentals_backend.common.response.ErrorResponse;
-import org.springframework.stereotype.Component;
-
-import jakarta.servlet.http.HttpServletRequest;
-import java.time.Instant;
-import java.util.ArrayList;
-
-@Component
-public class UserAlreadyExistsExceptionHandler implements ExceptionResponseHandler<UserAlreadyExistsException> {
-
-    @Override
-    public ErrorResponse handle(UserAlreadyExistsException exception, HttpServletRequest request) {
-        // Build error detail
-        ErrorDetail errorDetail = new ErrorDetail();
-        errorDetail.setCode("USER_ALREADY_EXISTS");
-        errorDetail.setType(ErrorType.BUSINESS_LOGIC_ERROR.toString());
-        errorDetail.setDetails(String.format("User with external ID '%s' already exists", exception.getExternalId()));
-
-        // Build error response
-        ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setStatus(400);
-        errorResponse.setMessage("User registration failed");
-        errorResponse.setError(errorDetail);
-        errorResponse.setPath(request.getRequestURI());
-        errorResponse.setMethod(request.getMethod());
-        errorResponse.setFieldErrors(new ArrayList<>());
-        errorResponse.setTimestamp(Instant.now());
-
-        return errorResponse;
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleUserAlreadyExists(UserAlreadyExistsException ex, HttpServletRequest request) {
+        return ErrorResponseBuilder.create()
+                .status(400)
+                .message("User registration failed")
+                .errorCode("USER_ALREADY_EXISTS")
+                .errorType(ErrorType.BUSINESS_LOGIC_ERROR.toString())
+                .errorDetails("User with external ID '%s' already exists".formatted(ex.getExternalId()))
+                .request(request)
+                .build();
     }
 }
 ```
 
 **Key Points:**
-- Implements `ExceptionResponseHandler<T>` interface
-- Annotated with `@Component` for Spring auto-detection
-- Returns `ErrorResponse` (not `ResponseEntity`)
-- Uses exception metadata to create detailed error messages
-- GlobalExceptionHandler wraps this in ResponseEntity
-
-**Step 3: Register in GlobalExceptionHandler**
-
-```java
-private void initializeHandlers() {
-    handlerMap.put(UserAlreadyExistsException.class, new UserAlreadyExistsExceptionHandler());
-    // Add new mappings here
-}
-```
-
-**Important:** Manual registration required in GlobalExceptionHandler's `initializeHandlers()` method.
+- Add to the existing domain `@ControllerAdvice` — no new files, no registration
+- Spring discovers the handler automatically
+- Returns `ResponseEntity<ErrorResponse>` directly via `ErrorResponseBuilder`
+- Use `@RequiredArgsConstructor` on the `@ControllerAdvice` class so future dependencies can be injected
 
 ### Throwing Exceptions
 
@@ -284,35 +264,22 @@ if (userRepository.existsByExternalId(externalId)) {
 **Flow:**
 1. Service throws exception with metadata
 2. Spring catches exception (no try-catch in controller)
-3. GlobalExceptionHandler looks up handler in map
-4. Handler creates ErrorResponse with specific details
-5. GlobalExceptionHandler wraps in ResponseEntity with status code
-6. Client receives standardized JSON error
+3. Spring routes to the matching `@ExceptionHandler` method on the domain's `@ControllerAdvice`
+4. Handler builds and returns `ResponseEntity<ErrorResponse>` via `ErrorResponseBuilder`
+5. Client receives standardized JSON error
 
 ### Design Decisions
 
-**Why ApplicationException base class?**
-- Ensures GlobalExceptionHandler only catches application exceptions
-- Prevents catching framework validation or security exceptions
-- Enables separate handling of validation vs business logic errors
+**Why `ApplicationException` base class?**
+- Prevents domain `@ControllerAdvice` from accidentally catching framework validation or security exceptions
+- `CommonExceptionHandler` catches `ApplicationException` as a catch-all fallback for any unmapped subclass
 - Clear separation between domain concerns and framework concerns
 
-**Why manual handler mapping?**
-- Explicit and easy to understand
-- No reflection complexity
-- Clear view of all exception→handler mappings in one place
-- Easy to debug and maintain
-
-**Why separate exception and handler?**
-- **Separation of concerns**: Business logic (exception) separate from HTTP concerns (handler)
-- **Flexibility**: Same exception can have different handlers in different contexts
-- **Testability**: Can test handlers independently
-- **Metadata focus**: Exceptions carry data, handlers format responses
-
-**Why handlers return ErrorResponse instead of ResponseEntity?**
-- Handlers focus on content, not HTTP protocol
-- GlobalExceptionHandler manages HTTP status codes and ResponseEntity creation
-- Cleaner separation of responsibilities
+**Why domain-local `@ControllerAdvice` instead of a central registry?**
+- Spring auto-discovers `@ControllerAdvice` beans — forgetting to register is impossible
+- Each domain is self-contained; the `common` package no longer imports every exception class
+- Adding a new exception = one new method in the relevant domain class
+- `@ControllerAdvice` beans are full Spring beans — dependencies can be injected via `@RequiredArgsConstructor`
 
 ## Integration with Controllers
 
@@ -511,24 +478,23 @@ public class CreatePropertyRequest {
 ## Best Practices
 
 ### Application Exceptions
-1. **All application exceptions MUST extend ApplicationException** - Required for GlobalExceptionHandler to catch them
+1. **All application exceptions MUST extend ApplicationException** - Required for domain `@ControllerAdvice` handlers to catch them
 2. **Exceptions carry metadata only** - No error messages in exceptions
 3. **Handlers create user-facing messages** - Use exception metadata to generate detailed messages
-4. **One handler per exception** - Each exception type has dedicated handler
-5. **Manual registration** - Explicitly register handlers in GlobalExceptionHandler
-6. **No try-catch in controllers** - Let global handler manage all exceptions
+4. **Add handler to domain `@ControllerAdvice`** - No registration required; Spring auto-discovers it
+5. **No try-catch in controllers** - Let the `@ControllerAdvice` handlers manage all exceptions
 
 ### Validation
-7. **Use @ValidEnum for enum fields** - Provides user-friendly error messages for invalid enum values
-8. **Field must be String type** - EnumValidator validates String fields against enum constant names
-9. **Combine @NotNull with @ValidEnum** - Both validators work together via field error grouping
-10. **Custom validators for complex rules** - Create reusable validators like @ValidEnum
+6. **Use @ValidEnum for enum fields** - Provides user-friendly error messages for invalid enum values
+7. **Field must be String type** - EnumValidator validates String fields against enum constant names
+8. **Combine @NotNull with @ValidEnum** - Both validators work together via field error grouping
+9. **Custom validators for complex rules** - Create reusable validators like @ValidEnum
 
 ### General
-11. **Use ErrorType enum** - Don't expose internal system details
-12. **Timestamps always UTC** - Use `Instant.now()` for consistent timezone handling
-13. **HTTP status in response body** - Matches the ResponseEntity status for API clarity
-14. **Field errors always grouped** - Multiple errors per field appear as array of messages
+10. **Use ErrorType enum** - Don't expose internal system details
+11. **Timestamps always UTC** - `ErrorResponseBuilder` sets `Instant.now()` automatically
+12. **HTTP status in response body** - Matches the ResponseEntity status for API clarity
+13. **Field errors always grouped** - Multiple errors per field appear as array of messages
 
 ## Example: Complete Exception Handling Flow
 
@@ -548,20 +514,20 @@ public ResponseEntity<ApiResponse<User>> signup(Authentication auth) {
     return ResponseBuilder.<User>create()...;     // Never reached if exception thrown
 }
 
-// 3. GlobalExceptionHandler catches and delegates
-@ExceptionHandler(Exception.class)
-public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
-    ExceptionResponseHandler handler = handlerMap.get(ex.getClass());
-    ErrorResponse errorResponse = handler.handle(ex, request);
-    return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
+// 3. Spring routes to UserExceptionHandler (auto-discovered @ControllerAdvice)
+@ExceptionHandler(UserAlreadyExistsException.class)
+public ResponseEntity<ErrorResponse> handleUserAlreadyExists(UserAlreadyExistsException ex, HttpServletRequest request) {
+    return ErrorResponseBuilder.create()
+            .status(400)
+            .message("User registration failed")
+            .errorCode("USER_ALREADY_EXISTS")
+            .errorType(ErrorType.BUSINESS_LOGIC_ERROR.toString())
+            .errorDetails("User with external ID '%s' already exists".formatted(ex.getExternalId()))
+            .request(request)
+            .build();
 }
 
-// 4. Specific handler creates response
-public ErrorResponse handle(UserAlreadyExistsException exception, HttpServletRequest request) {
-    // Build and return ErrorResponse with exception.getExternalId()
-}
-
-// 5. Client receives standardized error
+// 4. Client receives standardized error
 {
   "status": 400,
   "message": "User registration failed",

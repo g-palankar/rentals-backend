@@ -1,5 +1,6 @@
 package dev.ganeshpalankar.rentals_backend.common.response;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -75,6 +76,12 @@ public class ErrorResponseBuilder {
 
     public ErrorResponseBuilder method(String method) {
         this.method = method;
+        return this;
+    }
+
+    public ErrorResponseBuilder request(HttpServletRequest request) {
+        this.path = request.getRequestURI();
+        this.method = request.getMethod();
         return this;
     }
 
