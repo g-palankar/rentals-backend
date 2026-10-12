@@ -10,12 +10,16 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "organisations")
+@Table(name = "organisations",
+       uniqueConstraints = @UniqueConstraint(name = Organisation.UK_CREATED_BY_NAME,
+                                                columnNames = {"created_by", "name"}))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Organisation {
+
+    public static final String UK_CREATED_BY_NAME = "uk_organisations_created_by_name";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

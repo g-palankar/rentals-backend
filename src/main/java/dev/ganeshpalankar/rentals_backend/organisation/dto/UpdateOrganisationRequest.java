@@ -15,6 +15,6 @@ import lombok.Setter;
 public class UpdateOrganisationRequest {
 
     @NotBlank(message = "Organisation name is required")
-    @Schema(description = "New display name of the organisation", example = "Sunrise Properties")
+    @Schema(description = "New display name of the organisation. Leading and trailing whitespace is trimmed. Must be unique among organisations created by the same user as the organisation being renamed.", example = "Sunrise Properties")
     private String name;
 }

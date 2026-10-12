@@ -15,6 +15,6 @@ import lombok.Setter;
 public class CreateOrganisationRequest {
 
     @NotBlank(message = "Organisation name is required")
-    @Schema(description = "Display name of the organisation", example = "Sunset Properties")
+    @Schema(description = "Display name of the organisation. Leading and trailing whitespace is trimmed. Must be unique among organisations created by the same user.", example = "Sunset Properties")
     private String name;
 }

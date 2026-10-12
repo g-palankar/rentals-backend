@@ -9,6 +9,7 @@ import dev.ganeshpalankar.rentals_backend.organisation.dto.UpdateOrganisationReq
 import dev.ganeshpalankar.rentals_backend.organisation.exception.LastAdminException;
 import dev.ganeshpalankar.rentals_backend.organisation.exception.MemberAlreadyExistsException;
 import dev.ganeshpalankar.rentals_backend.organisation.exception.OrgHasPropertiesException;
+import dev.ganeshpalankar.rentals_backend.organisation.exception.OrganisationNameAlreadyExistsException;
 import dev.ganeshpalankar.rentals_backend.organisation.exception.OrganisationNotFoundException;
 import dev.ganeshpalankar.rentals_backend.organisation.exception.UserNotFoundByEmailException;
 import dev.ganeshpalankar.rentals_backend.organisation.model.Organisation;
@@ -21,6 +22,7 @@ import dev.ganeshpalankar.rentals_backend.property.repository.PropertyRepository
 import dev.ganeshpalankar.rentals_backend.users.model.User;
 import dev.ganeshpalankar.rentals_backend.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,10 +40,10 @@ public class OrganisationService {
     @Transactional
     public Organisation createOrganisation(CreateOrganisationRequest request, Long creatorId) {
         Organisation org = new Organisation();
-        org.setName(request.getName());
+        org.setName(request.getName().trim());
         org.setType(OrganisationType.COMPANY);
         org.setCreatedBy(creatorId);
-        org = organisationRepository.save(org);
+        org = saveOrganisation(org);
 
         OrganisationRoleAssignment assignment = new OrganisationRoleAssignment();
         assignment.setOrganisationId(org.getId());
@@ -130,8 +132,8 @@ public class OrganisationService {
     public Organisation updateOrganisation(Long orgId, UpdateOrganisationRequest request) {
         Organisation org = getOrganisationById(orgId);
         assertNotPersonal(org, "Personal organisations cannot be renamed");
-        org.setName(request.getName());
-        return organisationRepository.save(org);
+        org.setName(request.getName().trim());
+        return saveOrganisation(org);
     }
 
     @Transactional
@@ -143,6 +145,22 @@ public class OrganisationService {
         }
         roleAssignmentRepository.deleteByOrganisationId(orgId);
         organisationRepository.delete(org);
+    }
+
+    private Organisation saveOrganisation(Organisation org) {
+        try {
+            return organisationRepository.saveAndFlush(org);
+        } catch (DataIntegrityViolationException e) {
+            if (isNameConflict(e)) {
+                throw new OrganisationNameAlreadyExistsException(org.getName());
+            }
+            throw e;
+        }
+    }
+
+    private boolean isNameConflict(DataIntegrityViolationException e) {
+        String message = e.getMostSpecificCause().getMessage();
+        return message != null && message.toLowerCase().contains(Organisation.UK_CREATED_BY_NAME);
     }
 
     private void assertNotPersonal(Organisation org, String reason) {

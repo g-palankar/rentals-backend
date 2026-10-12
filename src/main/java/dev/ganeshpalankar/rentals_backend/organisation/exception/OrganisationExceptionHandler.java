@@ -74,4 +74,16 @@ public class OrganisationExceptionHandler {
                 .request(request)
                 .build();
     }
+
+    @ExceptionHandler(OrganisationNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleNameAlreadyExists(OrganisationNameAlreadyExistsException ex, HttpServletRequest request) {
+        return ErrorResponseBuilder.create()
+                .status(409)
+                .message("Organisation name already exists")
+                .errorCode("ORGANISATION_NAME_ALREADY_EXISTS")
+                .errorType(ErrorType.BUSINESS_LOGIC_ERROR.toString())
+                .errorDetails("An organisation named '%s' already exists".formatted(ex.getName()))
+                .request(request)
+                .build();
+    }
 }
